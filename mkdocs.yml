@@ -9,7 +9,7 @@ theme:
 
 nav:
   - Home: index.md
-  - Blog & Pages:
-    - About: about.md
-  - Static Sites & Tools:
+  - About: about.md
+  - Posts: posts/
+  - PlebTools:
     - Bitcoin Price: bitcoin-price.html
