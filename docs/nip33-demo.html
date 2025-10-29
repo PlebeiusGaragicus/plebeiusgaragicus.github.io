@@ -27,8 +27,15 @@
         
         .subtitle {
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             font-size: 0.9em;
+        }
+        
+        .published-time {
+            color: #999;
+            font-size: 0.8em;
+            margin-bottom: 30px;
+            font-style: italic;
         }
         
         .card {
@@ -218,11 +225,77 @@
             background: #fff3e0;
             color: #e65100;
         }
+        
+        .current-status-display {
+            background: #f5f5f5;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .current-status-display h3 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+            font-size: 1em;
+        }
+        
+        .current-status-display .status-content {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .current-status-display .status-meta {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .current-status-display.empty {
+            background: #fafafa;
+            border-left-color: #ccc;
+        }
+        
+        .current-status-display.empty h3 {
+            color: #666;
+        }
+        
+        .lookup-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .lookup-input {
+            width: calc(100% - 120px);
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            margin-right: 10px;
+        }
+        
+        .lookup-input:focus {
+            outline: none;
+            border-color: #2196f3;
+        }
+        
+        .lookup-btn {
+            padding: 10px 20px;
+            background: #4caf50;
+            vertical-align: top;
+        }
+        
+        .lookup-btn:hover {
+            background: #45a049;
+        }
     </style>
 </head>
 <body>
     <h1>NIP-33: Addressable Events Demo</h1>
     <p class="subtitle">Parameterized Replaceable Events (merged into NIP-01)</p>
+    <p class="published-time" id="publishedTime">Page built: <span id="buildTime">Loading...</span></p>
     
     <div class="info-box">
         <h3>How NIP-33 Works</h3>
@@ -263,6 +336,23 @@
         <div id="message"></div>
         
         <div id="pubkeyDisplay"></div>
+        
+        <div id="currentStatusDisplay"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Lookup Status by Pubkey</h2>
+        <p style="margin-bottom: 15px; color: #666;">Enter any pubkey (npub or hex) to view their current status:</p>
+        
+        <input 
+            type="text" 
+            id="lookupInput" 
+            class="lookup-input" 
+            placeholder="npub1... or hex pubkey"
+        />
+        <button class="lookup-btn" onclick="lookupStatus()">Lookup</button>
+        
+        <div id="lookupResult"></div>
     </div>
     
     <div class="card" id="eventCard" style="display: none;">
@@ -281,9 +371,72 @@
     </div>
     
     <script>
+        // Display build time
+        document.getElementById('buildTime').textContent = new Date().toLocaleString();
+        
         let currentPubkey = null;
         let relaySocket = null;
         let relayUrl = 'wss://nos.lol/';
+        let subscriptions = new Map();
+        
+        // NIP-19 encoding/decoding utilities
+        const BECH32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+        
+        function bech32Decode(str) {
+            const data = [];
+            let value = 0;
+            let bits = 0;
+            
+            for (let i = 6; i < str.length; i++) {
+                const char = str[i];
+                const idx = BECH32_CHARSET.indexOf(char);
+                if (idx === -1) throw new Error('Invalid bech32 character');
+                
+                value = (value << 5) | idx;
+                bits += 5;
+                
+                if (bits >= 8) {
+                    bits -= 8;
+                    data.push((value >> bits) & 0xff);
+                    value &= (1 << bits) - 1;
+                }
+            }
+            
+            return new Uint8Array(data.slice(0, -6)); // Remove checksum
+        }
+        
+        function npubToHex(npub) {
+            if (!npub.startsWith('npub1')) {
+                throw new Error('Invalid npub format');
+            }
+            
+            const data = bech32Decode(npub);
+            return Array.from(data).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        
+        function isValidHex(str) {
+            return /^[0-9a-f]{64}$/i.test(str);
+        }
+        
+        function normalizePubkey(input) {
+            input = input.trim();
+            
+            // If it's already hex
+            if (isValidHex(input)) {
+                return input.toLowerCase();
+            }
+            
+            // If it's npub, convert to hex
+            if (input.startsWith('npub1')) {
+                try {
+                    return npubToHex(input);
+                } catch (e) {
+                    throw new Error('Invalid npub format');
+                }
+            }
+            
+            throw new Error('Invalid pubkey format. Use npub1... or 64-character hex');
+        }
         
         // Check for Nostr extension on load
         window.addEventListener('load', async () => {
@@ -311,6 +464,121 @@
             }
         });
         
+        function fetchCurrentStatus(pubkey) {
+            if (!relaySocket || relaySocket.readyState !== WebSocket.OPEN) {
+                console.log('Relay not connected, cannot fetch status');
+                return;
+            }
+            
+            const subId = 'status-' + Math.random().toString(36).substring(7);
+            subscriptions.set(subId, { type: 'current', pubkey });
+            
+            const filter = {
+                kinds: [30078],
+                authors: [pubkey],
+                "#d": ["current-status"],
+                limit: 1
+            };
+            
+            const reqMessage = JSON.stringify(['REQ', subId, filter]);
+            relaySocket.send(reqMessage);
+            
+            console.log('Fetching current status for:', pubkey);
+        }
+        
+        function displayCurrentStatus(event, isOwn = true) {
+            const targetDiv = isOwn ? 'currentStatusDisplay' : 'lookupResult';
+            const displayDiv = document.getElementById(targetDiv);
+            
+            if (!event) {
+                displayDiv.innerHTML = `
+                    <div class="current-status-display empty">
+                        <h3>📭 No Status Found</h3>
+                        <p style="color: #666; margin: 0;">This user hasn't set a current status yet.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const date = new Date(event.created_at * 1000);
+            const timeAgo = getTimeAgo(date);
+            
+            displayDiv.innerHTML = `
+                <div class="current-status-display">
+                    <h3>📢 Current Status</h3>
+                    <div class="status-content">${escapeHtml(event.content)}</div>
+                    <div class="status-meta">
+                        Updated ${timeAgo} • ${date.toLocaleString()}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+            if (seconds < 604800) return Math.floor(seconds / 86400) + ' days ago';
+            return date.toLocaleDateString();
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        async function lookupStatus() {
+            const input = document.getElementById('lookupInput').value.trim();
+            
+            if (!input) {
+                showMessage('Please enter a pubkey (npub or hex)', 'error');
+                return;
+            }
+            
+            try {
+                const pubkey = normalizePubkey(input);
+                
+                if (!relaySocket || relaySocket.readyState !== WebSocket.OPEN) {
+                    showMessage('Relay not connected. Please wait for connection.', 'error');
+                    return;
+                }
+                
+                document.getElementById('lookupResult').innerHTML = `
+                    <div class="current-status-display">
+                        <h3>🔍 Searching...</h3>
+                        <p style="color: #666; margin: 0;">Querying relay for status...</p>
+                    </div>
+                `;
+                
+                const subId = 'lookup-' + Math.random().toString(36).substring(7);
+                subscriptions.set(subId, { type: 'lookup', pubkey });
+                
+                const filter = {
+                    kinds: [30078],
+                    authors: [pubkey],
+                    "#d": ["current-status"],
+                    limit: 1
+                };
+                
+                const reqMessage = JSON.stringify(['REQ', subId, filter]);
+                relaySocket.send(reqMessage);
+                
+                // Set timeout for no results
+                setTimeout(() => {
+                    if (subscriptions.has(subId)) {
+                        subscriptions.delete(subId);
+                        displayCurrentStatus(null, false);
+                    }
+                }, 3000);
+                
+            } catch (error) {
+                showMessage(error.message, 'error');
+            }
+        }
+        
         function connectToRelay() {
             const select = document.getElementById('relaySelect');
             relayUrl = select.value;
@@ -328,6 +596,11 @@
                 relaySocket.onopen = () => {
                     console.log('Connected to relay:', relayUrl);
                     updateRelayStatus('connected');
+                    
+                    // Fetch current status after connection
+                    if (currentPubkey) {
+                        setTimeout(() => fetchCurrentStatus(currentPubkey), 500);
+                    }
                 };
                 
                 relaySocket.onclose = () => {
@@ -345,7 +618,29 @@
                     console.log('Relay message:', event.data);
                     try {
                         const message = JSON.parse(event.data);
-                        if (message[0] === 'OK') {
+                        
+                        if (message[0] === 'EVENT') {
+                            const subId = message[1];
+                            const receivedEvent = message[2];
+                            
+                            if (subscriptions.has(subId)) {
+                                const sub = subscriptions.get(subId);
+                                
+                                if (sub.type === 'current') {
+                                    displayCurrentStatus(receivedEvent, true);
+                                } else if (sub.type === 'lookup') {
+                                    displayCurrentStatus(receivedEvent, false);
+                                }
+                            }
+                        } else if (message[0] === 'EOSE') {
+                            const subId = message[1];
+                            if (subscriptions.has(subId)) {
+                                const sub = subscriptions.get(subId);
+                                // Close subscription after EOSE
+                                relaySocket.send(JSON.stringify(['CLOSE', subId]));
+                                subscriptions.delete(subId);
+                            }
+                        } else if (message[0] === 'OK') {
                             console.log('Event published successfully:', message);
                         }
                     } catch (e) {
@@ -414,6 +709,9 @@
                     const eventMessage = JSON.stringify(['EVENT', signedEvent]);
                     relaySocket.send(eventMessage);
                     showMessage('Event signed and published to relay successfully!', 'success');
+                    
+                    // Update current status display immediately
+                    setTimeout(() => displayCurrentStatus(signedEvent, true), 100);
                 } else {
                     showMessage('Event signed but relay is not connected. Please check relay connection.', 'error');
                 }
@@ -464,6 +762,13 @@
         document.getElementById('statusInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 publishStatus();
+            }
+        });
+        
+        // Allow Enter key to lookup
+        document.getElementById('lookupInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                lookupStatus();
             }
         });
     </script>
