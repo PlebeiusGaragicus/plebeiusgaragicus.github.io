@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://plebeiusgaragicus.github.io/posts/nip33-addressable-events/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>NIP-33: Parameterized Replaceable Events (Addressable Events) - Plebeius Garagicus</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "NIP-33: Parameterized Replaceable Events (Addressable Events)";
+        var mkdocs_page_input_path = "posts/nip33-addressable-events.md";
+        var mkdocs_page_url = "/posts/nip33-addressable-events/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Plebeius Garagicus
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="../">Posts</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">PlebTools</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../bitcoin-price.html">Bitcoin Price</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../nip33-demo.html">NIP-33 Demo</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Plebeius Garagicus</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">NIP-33: Parameterized Replaceable Events (Addressable Events)</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="nip-33-parameterized-replaceable-events-addressable-events">NIP-33: Parameterized Replaceable Events (Addressable Events)</h1>
+<p><strong>Technical Report on Nostr's Addressable Event System</strong></p>
+<p><em>Last Updated: October 2024</em></p>
+<hr />
+<h2 id="executive-summary">Executive Summary</h2>
+<p>NIP-33 defines a class of Nostr events called "Parameterized Replaceable Events," now commonly referred to as "Addressable Events." This specification has been merged into NIP-01 as a core component of the Nostr protocol. These events enable applications to maintain current state rather than append-only history, making them ideal for profiles, status updates, application settings, and other data that should be replaced rather than accumulated.</p>
+<hr />
+<h2 id="1-introduction">1. Introduction</h2>
+<h3 id="11-background">1.1 Background</h3>
+<p>The Nostr protocol was initially designed around immutable, append-only events. While this works well for social media posts and messages, many applications require the ability to update existing data. NIP-33 addresses this need by introducing a standardized mechanism for replaceable events with unique identifiers.</p>
+<h3 id="12-problem-statement">1.2 Problem Statement</h3>
+<p>Traditional Nostr events (kinds 0-29999) are either:
+- <strong>Regular events</strong>: Immutable and append-only
+- <strong>Replaceable events</strong> (kinds 0, 3, 10000-19999): Can be replaced, but only one per kind per author</p>
+<p>This limitation meant applications couldn't maintain multiple pieces of replaceable data of the same type. For example, a user couldn't have multiple editable lists or multiple status messages for different contexts.</p>
+<hr />
+<h2 id="2-technical-specification">2. Technical Specification</h2>
+<h3 id="21-event-kind-range">2.1 Event Kind Range</h3>
+<p>Parameterized replaceable events use kind numbers in the range:</p>
+<pre><code>30000 ≤ kind &lt; 40000
+</code></pre>
+<p>Any event with a kind in this range is automatically treated as a parameterized replaceable event by compliant relays and clients.</p>
+<h3 id="22-the-d-tag-identifier">2.2 The "d" Tag Identifier</h3>
+<p>The critical component of NIP-33 is the <strong>"d" tag</strong> (identifier tag). This tag serves as a unique identifier within the scope of the event kind and author.</p>
+<p><strong>Structure:</strong></p>
+<pre><code class="language-json">[&quot;d&quot;, &quot;&lt;identifier&gt;&quot;]
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code class="language-json">{
+  &quot;kind&quot;: 30078,
+  &quot;tags&quot;: [
+    [&quot;d&quot;, &quot;current-status&quot;]
+  ],
+  &quot;content&quot;: &quot;Working on Nostr development&quot;,
+  &quot;pubkey&quot;: &quot;abc123...&quot;,
+  &quot;created_at&quot;: 1698000000,
+  &quot;id&quot;: &quot;def456...&quot;,
+  &quot;sig&quot;: &quot;789ghi...&quot;
+}
+</code></pre>
+<h3 id="23-replacement-logic">2.3 Replacement Logic</h3>
+<p>A relay MUST replace an older event with a newer one if and only if:</p>
+<ol>
+<li>Both events have the same <code>kind</code></li>
+<li>Both events have the same <code>pubkey</code> (author)</li>
+<li>Both events have the same <code>d</code> tag value</li>
+<li>The new event has a higher <code>created_at</code> timestamp</li>
+</ol>
+<p><strong>Pseudocode:</strong></p>
+<pre><code class="language-python">def should_replace(existing_event, new_event):
+    return (
+        existing_event.kind == new_event.kind and
+        existing_event.pubkey == new_event.pubkey and
+        existing_event.get_d_tag() == new_event.get_d_tag() and
+        new_event.created_at &gt; existing_event.created_at
+    )
+</code></pre>
+<h3 id="24-addressable-event-identifier">2.4 Addressable Event Identifier</h3>
+<p>Events can be uniquely addressed using the format:</p>
+<pre><code>&lt;kind&gt;:&lt;pubkey&gt;:&lt;d-tag-value&gt;
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code>30078:3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d:current-status
+</code></pre>
+<p>This addressing scheme allows clients to:
+- Request specific events from relays
+- Reference events without knowing their event ID
+- Construct URLs and deep links</p>
+<hr />
+<h2 id="3-common-use-cases">3. Common Use Cases</h2>
+<h3 id="31-user-status-updates">3.1 User Status Updates</h3>
+<p><strong>Kind:</strong> 30078 (Application-specific data)</p>
+<pre><code class="language-json">{
+  &quot;kind&quot;: 30078,
+  &quot;tags&quot;: [
+    [&quot;d&quot;, &quot;status&quot;]
+  ],
+  &quot;content&quot;: &quot;🚀 Shipping new features&quot;,
+  &quot;created_at&quot;: 1698000000
+}
+</code></pre>
+<h3 id="32-long-form-content-nip-23">3.2 Long-form Content (NIP-23)</h3>
+<p><strong>Kind:</strong> 30023 (Long-form content)</p>
+<pre><code class="language-json">{
+  &quot;kind&quot;: 30023,
+  &quot;tags&quot;: [
+    [&quot;d&quot;, &quot;my-first-blog-post&quot;],
+    [&quot;title&quot;, &quot;Understanding NIP-33&quot;],
+    [&quot;published_at&quot;, &quot;1698000000&quot;],
+    [&quot;t&quot;, &quot;nostr&quot;],
+    [&quot;t&quot;, &quot;protocol&quot;]
+  ],
+  &quot;content&quot;: &quot;# Understanding NIP-33\n\nThis is a long-form article...&quot;,
+  &quot;created_at&quot;: 1698000000
+}
+</code></pre>
+<h3 id="33-application-settings">3.3 Application Settings</h3>
+<p><strong>Kind:</strong> 30078</p>
+<pre><code class="language-json">{
+  &quot;kind&quot;: 30078,
+  &quot;tags&quot;: [
+    [&quot;d&quot;, &quot;app-settings&quot;],
+    [&quot;theme&quot;, &quot;dark&quot;],
+    [&quot;language&quot;, &quot;en&quot;]
+  ],
+  &quot;content&quot;: &quot;{\&quot;notifications\&quot;: true, \&quot;autoplay\&quot;: false}&quot;,
+  &quot;created_at&quot;: 1698000000
+}
+</code></pre>
+<h3 id="34-product-listings-nip-15">3.4 Product Listings (NIP-15)</h3>
+<p><strong>Kind:</strong> 30017 (Product listing)</p>
+<pre><code class="language-json">{
+  &quot;kind&quot;: 30017,
+  &quot;tags&quot;: [
+    [&quot;d&quot;, &quot;product-abc-123&quot;],
+    [&quot;title&quot;, &quot;Vintage Nostr T-Shirt&quot;],
+    [&quot;price&quot;, &quot;21000&quot;, &quot;sats&quot;],
+    [&quot;image&quot;, &quot;https://example.com/shirt.jpg&quot;]
+  ],
+  &quot;content&quot;: &quot;Limited edition Nostr t-shirt from 2023&quot;,
+  &quot;created_at&quot;: 1698000000
+}
+</code></pre>
+<hr />
+<h2 id="4-implementation-guide">4. Implementation Guide</h2>
+<h3 id="41-creating-an-addressable-event">4.1 Creating an Addressable Event</h3>
+<p><strong>Step 1: Define the event structure</strong></p>
+<pre><code class="language-javascript">const unsignedEvent = {
+  kind: 30078,              // Parameterized replaceable kind
+  created_at: Math.floor(Date.now() / 1000),
+  tags: [
+    [&quot;d&quot;, &quot;my-identifier&quot;]  // Required: unique identifier
+  ],
+  content: &quot;Event content here&quot;
+};
+</code></pre>
+<p><strong>Step 2: Sign the event</strong></p>
+<pre><code class="language-javascript">// Using window.nostr (browser extension)
+const signedEvent = await window.nostr.signEvent(unsignedEvent);
+
+// Or using a library like nostr-tools
+import { getEventHash, signEvent } from 'nostr-tools';
+
+unsignedEvent.pubkey = myPublicKey;
+unsignedEvent.id = getEventHash(unsignedEvent);
+unsignedEvent.sig = signEvent(unsignedEvent, myPrivateKey);
+</code></pre>
+<p><strong>Step 3: Publish to relays</strong></p>
+<pre><code class="language-javascript">const relay = new WebSocket('wss://relay.example.com');
+
+relay.onopen = () =&gt; {
+  const message = JSON.stringify(['EVENT', signedEvent]);
+  relay.send(message);
+};
+
+relay.onmessage = (event) =&gt; {
+  const [type, eventId, accepted, message] = JSON.parse(event.data);
+  if (type === 'OK' &amp;&amp; accepted) {
+    console.log('Event published successfully');
+  }
+};
+</code></pre>
+<h3 id="42-querying-addressable-events">4.2 Querying Addressable Events</h3>
+<p><strong>By address (recommended):</strong></p>
+<pre><code class="language-javascript">const filter = {
+  kinds: [30078],
+  authors: [&quot;3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d&quot;],
+  &quot;#d&quot;: [&quot;current-status&quot;]
+};
+
+const subscription = JSON.stringify(['REQ', subscriptionId, filter]);
+relay.send(subscription);
+</code></pre>
+<p><strong>By kind and author:</strong></p>
+<pre><code class="language-javascript">const filter = {
+  kinds: [30078],
+  authors: [&quot;3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d&quot;]
+};
+</code></pre>
+<h3 id="43-relay-implementation-considerations">4.3 Relay Implementation Considerations</h3>
+<p>Relays implementing NIP-33 must:</p>
+<ol>
+<li><strong>Index by composite key</strong>: Store events indexed by <code>(kind, pubkey, d-tag)</code></li>
+<li><strong>Replace on duplicate</strong>: When receiving an event with an existing address, compare timestamps</li>
+<li><strong>Maintain only latest</strong>: Only store the most recent event for each unique address</li>
+<li><strong>Support tag queries</strong>: Enable filtering by <code>#d</code> tag in REQ messages</li>
+</ol>
+<p><strong>Database schema example:</strong></p>
+<pre><code class="language-sql">CREATE TABLE addressable_events (
+  kind INTEGER NOT NULL,
+  pubkey TEXT NOT NULL,
+  d_tag TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  event_id TEXT NOT NULL,
+  content TEXT,
+  tags JSON,
+  sig TEXT NOT NULL,
+  PRIMARY KEY (kind, pubkey, d_tag)
+);
+
+CREATE INDEX idx_created_at ON addressable_events(created_at);
+CREATE INDEX idx_kind ON addressable_events(kind);
+</code></pre>
+<hr />
+<h2 id="5-comparison-with-other-event-types">5. Comparison with Other Event Types</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Regular Events</th>
+<th>Replaceable Events</th>
+<th>Addressable Events</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Kind Range</strong></td>
+<td>1000-9999, 20000-29999</td>
+<td>0, 3, 10000-19999</td>
+<td>30000-39999</td>
+</tr>
+<tr>
+<td><strong>Mutability</strong></td>
+<td>Immutable</td>
+<td>Replaceable</td>
+<td>Replaceable</td>
+</tr>
+<tr>
+<td><strong>Identifier</strong></td>
+<td>Event ID only</td>
+<td>Kind + Pubkey</td>
+<td>Kind + Pubkey + d-tag</td>
+</tr>
+<tr>
+<td><strong>Multiple per kind</strong></td>
+<td>Unlimited</td>
+<td>One per author</td>
+<td>Unlimited per author</td>
+</tr>
+<tr>
+<td><strong>Use Case</strong></td>
+<td>Posts, messages</td>
+<td>Profile, contact list</td>
+<td>Articles, settings, listings</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-security-considerations">6. Security Considerations</h2>
+<h3 id="61-timestamp-manipulation">6.1 Timestamp Manipulation</h3>
+<p><strong>Risk:</strong> Malicious actors could set future timestamps to prevent updates.</p>
+<p><strong>Mitigation:</strong> Relays should reject events with timestamps too far in the future (e.g., &gt; 10 minutes).</p>
+<pre><code class="language-javascript">const MAX_FUTURE_DRIFT = 600; // 10 minutes
+
+function isValidTimestamp(event) {
+  const now = Math.floor(Date.now() / 1000);
+  return event.created_at &lt;= now + MAX_FUTURE_DRIFT;
+}
+</code></pre>
+<h3 id="62-identifier-collisions">6.2 Identifier Collisions</h3>
+<p><strong>Risk:</strong> Using common or predictable <code>d</code> tag values could lead to unintended replacements.</p>
+<p><strong>Best Practice:</strong> Use descriptive, unique identifiers:</p>
+<pre><code class="language-javascript">// ❌ Bad: Generic identifier
+[&quot;d&quot;, &quot;post&quot;]
+
+// ✅ Good: Specific identifier
+[&quot;d&quot;, &quot;blog-post-understanding-nip33-2024-10-29&quot;]
+
+// ✅ Good: UUID for uniqueness
+[&quot;d&quot;, &quot;550e8400-e29b-41d4-a716-446655440000&quot;]
+</code></pre>
+<h3 id="63-relay-trust">6.3 Relay Trust</h3>
+<p><strong>Risk:</strong> Malicious relays could refuse to replace events or serve outdated versions.</p>
+<p><strong>Mitigation:</strong> 
+- Query multiple relays
+- Verify timestamps client-side
+- Use trusted relay networks</p>
+<hr />
+<h2 id="7-real-world-applications">7. Real-World Applications</h2>
+<h3 id="71-blogging-platforms">7.1 Blogging Platforms</h3>
+<p>Platforms like Habla.news and Yakihonne use NIP-33 (kind 30023) for long-form content, allowing authors to edit articles while maintaining a stable address.</p>
+<h3 id="72-marketplaces">7.2 Marketplaces</h3>
+<p>Nostr marketplaces use kinds 30017-30018 for product listings that can be updated as inventory changes.</p>
+<h3 id="73-profile-extensions">7.3 Profile Extensions</h3>
+<p>Applications extend user profiles beyond NIP-01's kind 0 using addressable events for additional metadata, preferences, and settings.</p>
+<h3 id="74-live-events">7.4 Live Events</h3>
+<p>Event organizers use addressable events to update event details, schedules, and announcements while maintaining a consistent reference.</p>
+<hr />
+<h2 id="8-best-practices">8. Best Practices</h2>
+<h3 id="81-choosing-the-right-event-type">8.1 Choosing the Right Event Type</h3>
+<pre><code>┌─────────────────────────────────────────┐
+│ Does the data need to be updated?      │
+└─────────────┬───────────────────────────┘
+              │
+              ├─ No ──→ Use regular event (kind 1000-9999)
+              │
+              └─ Yes ──┬─ Only one per author?
+                       │
+                       ├─ Yes ──→ Use replaceable event (kind 10000-19999)
+                       │
+                       └─ No ───→ Use addressable event (kind 30000-39999)
+</code></pre>
+<h3 id="82-naming-conventions-for-d-tags">8.2 Naming Conventions for "d" Tags</h3>
+<ol>
+<li><strong>Use kebab-case</strong>: <code>my-blog-post</code> instead of <code>myBlogPost</code></li>
+<li><strong>Be descriptive</strong>: <code>settings-theme</code> instead of <code>st</code></li>
+<li><strong>Include context</strong>: <code>article-nip33-guide</code> instead of <code>article</code></li>
+<li><strong>Avoid special characters</strong>: Stick to alphanumeric and hyphens</li>
+</ol>
+<h3 id="83-content-organization">8.3 Content Organization</h3>
+<pre><code class="language-json">{
+  &quot;kind&quot;: 30078,
+  &quot;tags&quot;: [
+    [&quot;d&quot;, &quot;app-config&quot;],
+    [&quot;version&quot;, &quot;1.0&quot;],
+    [&quot;updated&quot;, &quot;2024-10-29&quot;]
+  ],
+  &quot;content&quot;: &quot;{\&quot;structured\&quot;: \&quot;data\&quot;, \&quot;goes\&quot;: \&quot;here\&quot;}&quot;
+}
+</code></pre>
+<p><strong>Recommendation:</strong> Use tags for queryable metadata, content for bulk data.</p>
+<hr />
+<h2 id="9-testing-your-implementation">9. Testing Your Implementation</h2>
+<h3 id="91-test-event-creation">9.1 Test Event Creation</h3>
+<pre><code class="language-javascript">async function testAddressableEvent() {
+  const event = {
+    kind: 30078,
+    created_at: Math.floor(Date.now() / 1000),
+    tags: [[&quot;d&quot;, &quot;test-event&quot;]],
+    content: &quot;Test content&quot;
+  };
+
+  const signed = await window.nostr.signEvent(event);
+  console.log('Signed event:', signed);
+
+  // Verify structure
+  assert(signed.kind === 30078);
+  assert(signed.tags.some(t =&gt; t[0] === 'd'));
+  assert(signed.id &amp;&amp; signed.sig);
+}
+</code></pre>
+<h3 id="92-test-replacement-logic">9.2 Test Replacement Logic</h3>
+<pre><code class="language-javascript">async function testReplacement() {
+  // Create first event
+  const event1 = await createAndSign({
+    kind: 30078,
+    tags: [[&quot;d&quot;, &quot;test&quot;]],
+    content: &quot;Version 1&quot;
+  });
+
+  await publishToRelay(event1);
+  await sleep(1000);
+
+  // Create replacement
+  const event2 = await createAndSign({
+    kind: 30078,
+    tags: [[&quot;d&quot;, &quot;test&quot;]],
+    content: &quot;Version 2&quot;
+  });
+
+  await publishToRelay(event2);
+
+  // Query relay
+  const result = await queryRelay({
+    kinds: [30078],
+    &quot;#d&quot;: [&quot;test&quot;]
+  });
+
+  // Should only return latest
+  assert(result.length === 1);
+  assert(result[0].content === &quot;Version 2&quot;);
+}
+</code></pre>
+<hr />
+<h2 id="10-future-developments">10. Future Developments</h2>
+<h3 id="101-potential-enhancements">10.1 Potential Enhancements</h3>
+<ol>
+<li><strong>Versioning</strong>: Maintaining event history while still supporting replacement</li>
+<li><strong>Partial updates</strong>: Updating specific fields without resending entire content</li>
+<li><strong>Collaborative editing</strong>: Multiple authors for single addressable events</li>
+<li><strong>Expiration</strong>: Automatic deletion of addressable events after a time period</li>
+</ol>
+<h3 id="102-related-nips">10.2 Related NIPs</h3>
+<ul>
+<li><strong>NIP-01</strong>: Basic protocol flow (now includes NIP-33)</li>
+<li><strong>NIP-23</strong>: Long-form content (uses kind 30023)</li>
+<li><strong>NIP-51</strong>: Lists (uses kinds 30000-30003)</li>
+<li><strong>NIP-72</strong>: Moderated communities (uses kind 34550)</li>
+</ul>
+<hr />
+<h2 id="11-conclusion">11. Conclusion</h2>
+<p>NIP-33 Addressable Events represent a crucial evolution in the Nostr protocol, enabling stateful applications while maintaining the protocol's decentralized nature. By providing a standardized mechanism for replaceable, identifiable events, NIP-33 unlocks use cases ranging from blogging platforms to marketplaces to application settings.</p>
+<p>The elegant design—using kind ranges and a simple "d" tag—demonstrates Nostr's philosophy of minimal, composable specifications. As the ecosystem grows, addressable events will continue to be a foundational building block for sophisticated applications.</p>
+<hr />
+<h2 id="12-references">12. References</h2>
+<ul>
+<li><a href="https://github.com/nostr-protocol/nips/blob/master/01.md">NIP-01: Basic Protocol Flow</a></li>
+<li><a href="https://github.com/nostr-protocol/nips/blob/master/33.md">NIP-33: Parameterized Replaceable Events</a></li>
+<li><a href="https://github.com/nostr-protocol/nips/blob/master/23.md">NIP-23: Long-form Content</a></li>
+<li><a href="https://nostr.com">Nostr Protocol Documentation</a></li>
+</ul>
+<hr />
+<h2 id="appendix-a-complete-example">Appendix A: Complete Example</h2>
+<pre><code class="language-javascript">/**
+ * Complete example: Creating and publishing an addressable event
+ */
+
+class AddressableEventManager {
+  constructor(relayUrl) {
+    this.relayUrl = relayUrl;
+    this.relay = null;
+  }
+
+  async connect() {
+    return new Promise((resolve, reject) =&gt; {
+      this.relay = new WebSocket(this.relayUrl);
+      this.relay.onopen = () =&gt; resolve();
+      this.relay.onerror = (err) =&gt; reject(err);
+    });
+  }
+
+  async createEvent(identifier, content, additionalTags = []) {
+    const event = {
+      kind: 30078,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        [&quot;d&quot;, identifier],
+        ...additionalTags
+      ],
+      content: content
+    };
+
+    // Sign with browser extension
+    return await window.nostr.signEvent(event);
+  }
+
+  async publish(event) {
+    return new Promise((resolve, reject) =&gt; {
+      const message = JSON.stringify(['EVENT', event]);
+
+      const handler = (msg) =&gt; {
+        const [type, eventId, accepted, reason] = JSON.parse(msg.data);
+        if (type === 'OK') {
+          this.relay.removeEventListener('message', handler);
+          if (accepted) {
+            resolve({ success: true, eventId });
+          } else {
+            reject(new Error(reason));
+          }
+        }
+      };
+
+      this.relay.addEventListener('message', handler);
+      this.relay.send(message);
+
+      // Timeout after 5 seconds
+      setTimeout(() =&gt; {
+        this.relay.removeEventListener('message', handler);
+        reject(new Error('Publish timeout'));
+      }, 5000);
+    });
+  }
+
+  async query(filter) {
+    return new Promise((resolve) =&gt; {
+      const subId = Math.random().toString(36).substring(7);
+      const events = [];
+
+      const handler = (msg) =&gt; {
+        const data = JSON.parse(msg.data);
+        if (data[0] === 'EVENT' &amp;&amp; data[1] === subId) {
+          events.push(data[2]);
+        } else if (data[0] === 'EOSE' &amp;&amp; data[1] === subId) {
+          this.relay.removeEventListener('message', handler);
+          resolve(events);
+        }
+      };
+
+      this.relay.addEventListener('message', handler);
+      this.relay.send(JSON.stringify(['REQ', subId, filter]));
+    });
+  }
+
+  getAddress(event) {
+    const dTag = event.tags.find(t =&gt; t[0] === 'd')?.[1] || '';
+    return `${event.kind}:${event.pubkey}:${dTag}`;
+  }
+}
+
+// Usage
+async function main() {
+  const manager = new AddressableEventManager('wss://nos.lol/');
+  await manager.connect();
+
+  // Create and publish
+  const event = await manager.createEvent(
+    'my-status',
+    'Building on Nostr! 🚀',
+    [['emoji', '🚀']]
+  );
+
+  console.log('Address:', manager.getAddress(event));
+
+  await manager.publish(event);
+  console.log('Published successfully!');
+
+  // Query back
+  const results = await manager.query({
+    kinds: [30078],
+    '#d': ['my-status'],
+    authors: [event.pubkey]
+  });
+
+  console.log('Retrieved:', results);
+}
+</code></pre>
+<hr />
+<p><strong>Document Version:</strong> 1.0<br />
+<strong>Author:</strong> Plebeius Garagicus<br />
+<strong>Date:</strong> October 29, 2024<br />
+<strong>License:</strong> Public Domain</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
