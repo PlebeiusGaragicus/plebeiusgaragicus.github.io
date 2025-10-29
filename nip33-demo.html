@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIP-33: Addressable Events Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .info-box h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .info-box code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d32f2f;
+        }
+        
+        .status-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+        
+        .status-input:focus {
+            outline: none;
+            border-color: #2196f3;
+        }
+        
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #1976d2;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .event-display {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .address-display {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            word-wrap: break-word;
+        }
+        
+        .address-display strong {
+            color: #e65100;
+        }
+        
+        .address-display code {
+            display: block;
+            margin-top: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 3px;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border-left: 4px solid #c62828;
+        }
+        
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border-left: 4px solid #2e7d32;
+        }
+        
+        .pubkey-display {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        
+        ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>NIP-33: Addressable Events Demo</h1>
+    <p class="subtitle">Parameterized Replaceable Events (merged into NIP-01)</p>
+    
+    <div class="info-box">
+        <h3>How NIP-33 Works</h3>
+        <p><strong>Addressable Events</strong> are Nostr events that can be replaced by newer versions. They use:</p>
+        <ul>
+            <li><strong>Kind range:</strong> <code>30000-39999</code> (we're using <code>30078</code>)</li>
+            <li><strong>Required "d" tag:</strong> A unique identifier (we're using <code>"current-status"</code>)</li>
+            <li><strong>Replacement logic:</strong> Same pubkey + kind + "d" tag = newer event replaces older</li>
+            <li><strong>Address format:</strong> <code>&lt;kind&gt;:&lt;pubkey&gt;:&lt;d-value&gt;</code></li>
+        </ul>
+        <p style="margin-top: 10px;"><em>Perfect for status updates, profiles, or any data that should be current rather than historical.</em></p>
+    </div>
+    
+    <div class="card">
+        <h2>Your Current Status</h2>
+        <p style="margin-bottom: 15px; color: #666;">Update your status using a NIP-33 addressable event. Each update replaces the previous one.</p>
+        
+        <input 
+            type="text" 
+            id="statusInput" 
+            class="status-input" 
+            placeholder="What's your current status?"
+            maxlength="280"
+        />
+        
+        <button id="publishBtn" onclick="publishStatus()">Publish Status (Sign with Nostr)</button>
+        
+        <div id="message"></div>
+        
+        <div id="pubkeyDisplay"></div>
+    </div>
+    
+    <div class="card" id="eventCard" style="display: none;">
+        <h2>Signed Event</h2>
+        <p style="margin-bottom: 15px; color: #666;">This is the actual event that was signed and would be published to relays:</p>
+        <div id="eventDisplay" class="event-display"></div>
+        
+        <div class="address-display">
+            <strong>Addressable Event Identifier:</strong>
+            <code id="addressDisplay"></code>
+            <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                This unique identifier allows relays and clients to find and replace this specific event.
+                Any new event with the same address will replace this one.
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        let currentPubkey = null;
+        
+        // Check for Nostr extension on load
+        window.addEventListener('load', async () => {
+            if (!window.nostr) {
+                showMessage('Please install a Nostr browser extension (like nos2x or Alby) to use this demo.', 'error');
+                document.getElementById('publishBtn').disabled = true;
+                return;
+            }
+            
+            try {
+                // Get public key
+                currentPubkey = await window.nostr.getPublicKey();
+                document.getElementById('pubkeyDisplay').innerHTML = `
+                    <div class="pubkey-display">
+                        <strong>Your Public Key:</strong><br>
+                        ${currentPubkey}
+                    </div>
+                `;
+            } catch (error) {
+                showMessage('Failed to get public key. Please check your Nostr extension.', 'error');
+                document.getElementById('publishBtn').disabled = true;
+            }
+        });
+        
+        async function publishStatus() {
+            const statusInput = document.getElementById('statusInput');
+            const status = statusInput.value.trim();
+            
+            if (!status) {
+                showMessage('Please enter a status message.', 'error');
+                return;
+            }
+            
+            if (!window.nostr) {
+                showMessage('Nostr extension not found.', 'error');
+                return;
+            }
+            
+            try {
+                // Create the unsigned event
+                const unsignedEvent = {
+                    kind: 30078, // Parameterized replaceable event kind
+                    created_at: Math.floor(Date.now() / 1000),
+                    tags: [
+                        ["d", "current-status"] // The "d" tag makes this addressable
+                    ],
+                    content: status
+                };
+                
+                showMessage('Waiting for signature...', 'info');
+                
+                // Sign the event using the Nostr extension
+                const signedEvent = await window.nostr.signEvent(unsignedEvent);
+                
+                // Display the signed event
+                displayEvent(signedEvent);
+                
+                showMessage('Event signed successfully! In a real app, this would now be published to Nostr relays.', 'success');
+                
+                // Clear input
+                statusInput.value = '';
+                
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+                console.error('Signing error:', error);
+            }
+        }
+        
+        function displayEvent(event) {
+            const eventCard = document.getElementById('eventCard');
+            const eventDisplay = document.getElementById('eventDisplay');
+            const addressDisplay = document.getElementById('addressDisplay');
+            
+            // Format the event for display
+            eventDisplay.textContent = JSON.stringify(event, null, 2);
+            
+            // Create the addressable event identifier
+            const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+            const address = `${event.kind}:${event.pubkey}:${dTag}`;
+            addressDisplay.textContent = address;
+            
+            // Show the card
+            eventCard.style.display = 'block';
+            
+            // Scroll to the event display
+            eventCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            messageDiv.innerHTML = `<div class="${className}">${text}</div>`;
+            
+            // Clear info messages after 3 seconds
+            if (type === 'info') {
+                setTimeout(() => {
+                    messageDiv.innerHTML = '';
+                }, 3000);
+            }
+        }
+        
+        // Allow Enter key to publish
+        document.getElementById('statusInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                publishStatus();
+            }
+        });
+    </script>
+</body>
+</html>
