@@ -2,4 +2,12 @@
 
 This is my personal site.
 
-[About](about.md)
+## Table of Contents
+
+### Blog & Pages
+
+- [About](about.md) - About me and this site
+
+### PlebTools
+
+- [Bitcoin Price](bitcoin-price.html) - Live Bitcoin price tracker

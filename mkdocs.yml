@@ -6,4 +6,7 @@ theme:
 
 nav:
   - Home: index.md
-  - About: about.md
+  - Blog & Pages:
+    - About: about.md
+  - Static Sites & Tools:
+    - Bitcoin Price: bitcoin-price.html

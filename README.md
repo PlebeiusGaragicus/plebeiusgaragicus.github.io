@@ -16,13 +16,16 @@ mkdocs serve
 
 3. Open your browser to `http://127.0.0.1:8000`
 
-## Adding Pages
+## Adding Content
 
-Create markdown files in `docs/` and add them to the `nav` section in `mkdocs.yml`.
+### Blog Posts & Pages
 
-## Adding Static HTML Files
+Create markdown files in `docs/` and add them to the `Blog & Pages` section in `mkdocs.yml`.
+
+### Static Sites & Tools
 
 Place HTML files in `docs/` - they'll be copied as-is to the built site.
+Add them to the `Static Sites & Tools` section in `mkdocs.yml`.
 
 Example: `docs/tool.html` → accessible at `/tool.html`
 
@@ -49,7 +52,7 @@ The workflow builds from `main` and deploys to `gh-pages`. The `.nojekyll` file 
 ```
 .
 ├── docs/
-│   ├── index.md          # Home page
+│   ├── index.md          # Home page with table of contents
 │   ├── about.md          # About page
 │   └── *.html            # Static HTML files
 ├── mkdocs.yml            # MkDocs configuration
