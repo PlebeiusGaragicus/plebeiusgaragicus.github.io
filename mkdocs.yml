@@ -8,11 +8,6 @@ theme:
 
 plugins:
   - search
-  - blog:
-      blog_dir: blog
-      post_date_format: medium
-      post_url_format: "{slug}"
-      authors: false
 
 markdown_extensions:
   - tables
@@ -22,4 +17,6 @@ nav:
   - Home: index.md
   - Blog:
     - blog/index.md
+    - PlebTools: blog/posts/plebtools.md
+    - Welcome: blog/posts/welcome.md
   - About: about.md

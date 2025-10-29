@@ -1,12 +1,8 @@
----
-date: 2024-10-29
----
-
 # PlebTools
 
-A collection of useful tools and utilities.
+*October 29, 2024*
 
-<!-- more -->
+A collection of useful tools and utilities.
 
 ## Available Tools
 

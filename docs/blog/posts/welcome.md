@@ -1,12 +1,8 @@
----
-date: 2024-10-29
----
-
 # Welcome to My Blog
 
-This is my first post! I'm excited to start sharing my thoughts and ideas here.
+*October 29, 2024*
 
-<!-- more -->
+This is my first post! I'm excited to start sharing my thoughts and ideas here.
 
 ## What to Expect
 
