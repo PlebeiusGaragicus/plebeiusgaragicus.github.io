@@ -1,1 +1,2 @@
 mkdocs>=1.5.0
+mkdocs-awesome-pages-plugin>=2.9.0

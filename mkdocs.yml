@@ -7,9 +7,12 @@ theme:
   include_homepage_in_sidebar: true
   navigation_depth: 4
 
+plugins:
+  - search
+  - awesome-pages
+
 nav:
   - Home: index.md
-  - About: about.md
   - Posts: posts/
   - PlebTools:
     - Bitcoin Price: bitcoin-price.html
