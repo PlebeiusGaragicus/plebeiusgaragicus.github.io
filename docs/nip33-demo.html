@@ -168,6 +168,56 @@
         li {
             margin-bottom: 8px;
         }
+        
+        .relay-selector {
+            margin-bottom: 15px;
+        }
+        
+        .relay-selector label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .relay-selector select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .relay-selector select:focus {
+            outline: none;
+            border-color: #2196f3;
+        }
+        
+        .relay-status {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .relay-status.connected {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .relay-status.disconnected {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .relay-status.connecting {
+            background: #fff3e0;
+            color: #e65100;
+        }
     </style>
 </head>
 <body>
@@ -190,6 +240,16 @@
         <h2>Your Current Status</h2>
         <p style="margin-bottom: 15px; color: #666;">Update your status using a NIP-33 addressable event. Each update replaces the previous one.</p>
         
+        <div class="relay-selector">
+            <label for="relaySelect">
+                Select Relay
+                <span id="relayStatus" class="relay-status disconnected">Disconnected</span>
+            </label>
+            <select id="relaySelect" onchange="connectToRelay()">
+                <option value="wss://nos.lol/">wss://nos.lol/</option>
+            </select>
+        </div>
+        
         <input 
             type="text" 
             id="statusInput" 
@@ -198,7 +258,7 @@
             maxlength="280"
         />
         
-        <button id="publishBtn" onclick="publishStatus()">Publish Status (Sign with Nostr)</button>
+        <button id="publishBtn" onclick="publishStatus()">Publish Status (Sign & Broadcast)</button>
         
         <div id="message"></div>
         
@@ -207,7 +267,7 @@
     
     <div class="card" id="eventCard" style="display: none;">
         <h2>Signed Event</h2>
-        <p style="margin-bottom: 15px; color: #666;">This is the actual event that was signed and would be published to relays:</p>
+        <p style="margin-bottom: 15px; color: #666;">This is the actual event that was signed and published to the relay:</p>
         <div id="eventDisplay" class="event-display"></div>
         
         <div class="address-display">
@@ -222,6 +282,8 @@
     
     <script>
         let currentPubkey = null;
+        let relaySocket = null;
+        let relayUrl = 'wss://nos.lol/';
         
         // Check for Nostr extension on load
         window.addEventListener('load', async () => {
@@ -240,11 +302,79 @@
                         ${currentPubkey}
                     </div>
                 `;
+                
+                // Connect to relay
+                connectToRelay();
             } catch (error) {
                 showMessage('Failed to get public key. Please check your Nostr extension.', 'error');
                 document.getElementById('publishBtn').disabled = true;
             }
         });
+        
+        function connectToRelay() {
+            const select = document.getElementById('relaySelect');
+            relayUrl = select.value;
+            
+            // Close existing connection
+            if (relaySocket) {
+                relaySocket.close();
+            }
+            
+            updateRelayStatus('connecting');
+            
+            try {
+                relaySocket = new WebSocket(relayUrl);
+                
+                relaySocket.onopen = () => {
+                    console.log('Connected to relay:', relayUrl);
+                    updateRelayStatus('connected');
+                };
+                
+                relaySocket.onclose = () => {
+                    console.log('Disconnected from relay:', relayUrl);
+                    updateRelayStatus('disconnected');
+                };
+                
+                relaySocket.onerror = (error) => {
+                    console.error('Relay connection error:', error);
+                    updateRelayStatus('disconnected');
+                    showMessage('Failed to connect to relay. Please try again.', 'error');
+                };
+                
+                relaySocket.onmessage = (event) => {
+                    console.log('Relay message:', event.data);
+                    try {
+                        const message = JSON.parse(event.data);
+                        if (message[0] === 'OK') {
+                            console.log('Event published successfully:', message);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing relay message:', e);
+                    }
+                };
+            } catch (error) {
+                console.error('Error creating WebSocket:', error);
+                updateRelayStatus('disconnected');
+                showMessage('Failed to connect to relay.', 'error');
+            }
+        }
+        
+        function updateRelayStatus(status) {
+            const statusElement = document.getElementById('relayStatus');
+            statusElement.className = 'relay-status ' + status;
+            
+            switch(status) {
+                case 'connected':
+                    statusElement.textContent = 'Connected';
+                    break;
+                case 'connecting':
+                    statusElement.textContent = 'Connecting...';
+                    break;
+                case 'disconnected':
+                    statusElement.textContent = 'Disconnected';
+                    break;
+            }
+        }
         
         async function publishStatus() {
             const statusInput = document.getElementById('statusInput');
@@ -279,7 +409,14 @@
                 // Display the signed event
                 displayEvent(signedEvent);
                 
-                showMessage('Event signed successfully! In a real app, this would now be published to Nostr relays.', 'success');
+                // Publish to relay
+                if (relaySocket && relaySocket.readyState === WebSocket.OPEN) {
+                    const eventMessage = JSON.stringify(['EVENT', signedEvent]);
+                    relaySocket.send(eventMessage);
+                    showMessage('Event signed and published to relay successfully!', 'success');
+                } else {
+                    showMessage('Event signed but relay is not connected. Please check relay connection.', 'error');
+                }
                 
                 // Clear input
                 statusInput.value = '';
