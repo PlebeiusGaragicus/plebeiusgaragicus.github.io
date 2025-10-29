@@ -30,6 +30,20 @@ Example: `docs/tool.html` → accessible at `/tool.html`
 
 Pushes to `main` automatically deploy to GitHub Pages via GitHub Actions.
 
+### GitHub Pages Configuration
+
+**Important**: Configure GitHub Pages to use the workflow, not Jekyll:
+
+1. Go to repo **Settings** → **Pages**
+2. Under **Build and deployment**:
+   - **Source**: Select **"GitHub Actions"**
+
+**Alternative** (if "GitHub Actions" option unavailable):
+   - **Source**: "Deploy from a branch"
+   - **Branch**: `gh-pages` / `/ (root)`
+   
+The workflow builds from `main` and deploys to `gh-pages`. The `.nojekyll` file prevents Jekyll from interfering with the MkDocs-built site.
+
 ## Project Structure
 
 ```
