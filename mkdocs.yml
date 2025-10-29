@@ -1,22 +1,9 @@
 site_name: Plebeius Garagicus
 site_url: https://plebeiusgaragicus.github.io
-site_author: Plebeius Garagicus
-site_description: A collection of thoughts and ideas
 
 theme:
   name: readthedocs
 
-plugins:
-  - search
-
-markdown_extensions:
-  - tables
-  - fenced_code
-
 nav:
   - Home: index.md
-  - Blog:
-    - blog/index.md
-    - PlebTools: blog/posts/plebtools.md
-    - Welcome: blog/posts/welcome.md
   - About: about.md

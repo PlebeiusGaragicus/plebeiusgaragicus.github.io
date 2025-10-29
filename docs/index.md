@@ -1,3 +1,5 @@
 # Welcome
 
-Welcome to my thing
+This is my personal site.
+
+[About](about.md)
