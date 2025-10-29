@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bitcoin Price</title>
+    <style>
+        a { color: blue; text-decoration: underline; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <p>Bitcoin price: <a id="priceLink">fetch</a></p>
+    <script>
+        const priceLink = document.getElementById('priceLink');
+        
+        priceLink.addEventListener('click', fetchBitcoinPrice);
+        
+        function fetchBitcoinPrice() {
+            // Show loading state
+            priceLink.textContent = 'Loading...';
+            
+            fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot')
+                .then(response => response.json())
+                .then(data => {
+                    const price = parseFloat(data.data.amount);
+                    const formattedPrice = new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD'
+                    }).format(price);
+                    
+                    // Replace link text with price preceded by "Bitcoin price: "
+                    priceLink.textContent = formattedPrice;
+                })
+                .catch(error => {
+                    priceLink.textContent = 'fetch';
+                });
+        }
+    </script>
+</body>
+</html>
