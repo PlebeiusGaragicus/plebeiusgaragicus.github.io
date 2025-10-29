@@ -1,6 +1,6 @@
 # plebeiusgaragicus.github.io
 
-A personal blog built with [MkDocs](https://www.mkdocs.org/) and [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/).
+A personal blog built with [MkDocs](https://www.mkdocs.org/) using a minimal theme.
 
 ## Local Development
 
@@ -23,13 +23,6 @@ Create new blog posts in `docs/blog/posts/` with the following frontmatter:
 ```markdown
 ---
 date: YYYY-MM-DD
-authors:
-  - plebeiusgaragicus
-categories:
-  - Category Name
-tags:
-  - tag1
-  - tag2
 ---
 
 # Post Title

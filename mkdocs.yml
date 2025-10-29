@@ -4,33 +4,7 @@ site_author: Plebeius Garagicus
 site_description: A collection of thoughts and ideas
 
 theme:
-  name: material
-  palette:
-    # Palette toggle for light mode
-    - scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    # Palette toggle for dark mode
-    - scheme: slate
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
-  features:
-    - navigation.instant
-    - navigation.tracking
-    - navigation.tabs
-    - navigation.sections
-    - navigation.expand
-    - navigation.top
-    - search.suggest
-    - search.highlight
-    - content.code.copy
-    - content.code.annotate
+  name: readthedocs
 
 plugins:
   - search
@@ -38,44 +12,14 @@ plugins:
       blog_dir: blog
       post_date_format: medium
       post_url_format: "{slug}"
-      authors: true
-      authors_file: "{blog}/.authors.yml"
-  - tags:
-      tags_file: tags.md
+      authors: false
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
-      line_spans: __span
-      pygments_lang_class: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
-  - pymdownx.tasklist:
-      custom_checkbox: true
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
-  - admonition
-  - pymdownx.details
-  - attr_list
-  - md_in_html
-  - def_list
-  - footnotes
   - tables
-  - toc:
-      permalink: true
+  - fenced_code
 
 nav:
   - Home: index.md
   - Blog:
     - blog/index.md
-  - Tags: tags.md
   - About: about.md
-
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/plebeiusgaragicus

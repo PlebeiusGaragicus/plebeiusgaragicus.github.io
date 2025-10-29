@@ -1,12 +1,5 @@
 ---
 date: 2024-10-29
-authors:
-  - plebeiusgaragicus
-categories:
-  - General
-tags:
-  - welcome
-  - introduction
 ---
 
 # Welcome to My Blog
@@ -21,4 +14,4 @@ I'll be writing about various topics that interest me. Stay tuned for more posts
 
 ## Getting Started
 
-This blog is built with [MkDocs](https://www.mkdocs.org/) and the [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) theme.
+This blog is built with [MkDocs](https://www.mkdocs.org/).
