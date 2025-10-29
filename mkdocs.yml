@@ -3,6 +3,9 @@ site_url: https://plebeiusgaragicus.github.io
 
 theme:
   name: readthedocs
+  prev_next_buttons_location: none
+  include_homepage_in_sidebar: true
+  navigation_depth: 4
 
 nav:
   - Home: index.md
